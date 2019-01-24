@@ -1,0 +1,41 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: signalsciences
+  labels:
+    app: signalsciences
+spec:
+  template:
+    metadata:
+      labels:
+        app: signalsciences
+    spec:
+      volumes:
+        - name: var-run
+          hostPath:
+            path: /var/run/sigsci
+      containers:
+        - name: sigsci-agent
+          image: marc/sigsci-agent:3.12.1
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+              - mountPath: /var/run/sigsci
+                name: var-run
+                readOnly: false
+          env:
+            - name: SIGSCI_RPC_ADDRESS
+              value: unix:/var/run/sigsci/sigsci.sock
+            - name: SIGSCI_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: SIGSCI_SECRETACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: signalsciences
+                  key: secretAccessKey
+            - name: SIGSCI_ACCESSKEYID
+              valueFrom:
+                secretKeyRef:
+                  name: signalsciences
+                  key: accessKeyId
