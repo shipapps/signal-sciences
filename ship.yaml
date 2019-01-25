@@ -6,6 +6,36 @@ assets:
         path: manifests/
         proxy: false
         strip_path: true
+    - inline:
+        dest: ./overlays/ship/secret.yaml
+        when: '{{repl ConfigOptionEquals "sealed_secrets" "unencrypted_secrets"}}'
+        contents: |
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: signalsciences
+            labels:
+              app: signalsciences
+          type: Opaque
+          data:
+            secretAccessKey: '{{repl ConfigOption "access_key_id" | Base64Encode }}'
+            accessKeyId: '{{repl ConfigOption "secret_access_key" | Base64Encode }}'
+
+    - inline:
+        dest: ./overlays/ship/sealedsecret.yaml
+        when: '{{repl ConfigOptionEquals "sealed_secrets" "sealed_secrets"}}'
+        contents: |
+          ---
+          apiVersion: v1
+          apiVersion: bitnami.com/v1alpha1
+          kind: SealedSecret
+          metadata:
+            name: signalsciences
+            namespace: default
+          spec:
+            encryptedData:
+              accessKeyId: '{{repl KubeSeal (ConfigOption "sealed_secret_cert") (ConfigOption "namespace") "signalsciences" (ConfigOption "access_key_id") }}'
+              secretAccessKey: '{{repl KubeSeal (ConfigOption "sealed_secret_cert") (ConfigOption "namespace") "signalsciences" (ConfigOption "secret_access_key") }}'
 
 config:
   v1:
@@ -41,10 +71,6 @@ config:
           type: text
           required: true
           when: '{{repl ConfigOptionNotEquals "sealed_secrets" "no_secrets"}}'
-        - name: no_secrets_instructions
-          type: label
-          when: '{{repl ConfigOptionEquals "sealed_secrets" "no_secrets"}}'
-          value:
 
 lifecycle:
   v1:
