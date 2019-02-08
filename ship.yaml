@@ -1,14 +1,14 @@
 assets:
   v1:
     - github:
-        dest: ./base
+        dest: ../base
         repo: shipapps/signal-sciences
         path: manifests/
         proxy: false
         strip_path: true
     - inline:
-        dest: ./overlays/ship/secret.yaml
-        when: '{{repl ConfigOptionEquals "sealed_secrets" "unencrypted_secrets"}}'
+        dest: ./overlays/secrets/secret.yaml
+        when: '{{repl ConfigOptionEquals "secret_type" "unencrypted_secrets"}}'
         contents: |
           apiVersion: v1
           kind: Secret
@@ -22,8 +22,8 @@ assets:
             accessKeyId: '{{repl ConfigOption "secret_access_key" | Base64Encode }}'
 
     - inline:
-        dest: ./overlays/ship/sealedsecret.yaml
-        when: '{{repl ConfigOptionEquals "sealed_secrets" "sealed_secrets"}}'
+        dest: ./overlays/secrets/sealedsecret.yaml
+        when: '{{repl ConfigOptionEquals "secret_type" "sealed_secrets"}}'
         contents: |
           ---
           apiVersion: v1
@@ -42,10 +42,10 @@ config:
     - name: secrets
       title: Secret Management
       items:
-        - name: sealed_secrets
+        - name: secret_type
           title: How would you like to manage your SignalSciences credentials?
           type: select_one
-          default: sealed_secrets
+          default: unencrypted_secrets
           items:
             - name: sealed_secrets
               title: Provision as SealedSecrets
@@ -57,7 +57,7 @@ config:
           title: SealedSecret Cert
           type: textarea
           required: true
-          when: '{{repl ConfigOptionEquals "sealed_secrets" "sealed_secrets"}}'
+          when: '{{repl ConfigOptionEquals "secret_type" "sealed_secrets"}}'
     - name: credentials
       title: SignalSciences Credentials
       items:
@@ -65,12 +65,12 @@ config:
           title: AccessKeyId
           type: text
           required: true
-          when: '{{repl ConfigOptionNotEquals "sealed_secrets" "no_secrets"}}'
+          when: '{{repl ConfigOptionNotEquals "secret_type" "no_secrets"}}'
         - name: secret_access_key
           title: SecretAccessKey
           type: text
           required: true
-          when: '{{repl ConfigOptionNotEquals "sealed_secrets" "no_secrets"}}'
+          when: '{{repl ConfigOptionNotEquals "secret_type" "no_secrets"}}'
 
 lifecycle:
   v1:
@@ -95,7 +95,7 @@ lifecycle:
         id: secret-warning
         requires: ["config"]
         contents: |
-          {{repl if ConfigOptionEquals "sealed_secrets" "no_secrets"}}
+          {{repl if ConfigOptionEquals "secret_type" "no_secrets"}}
             # <img src="https://www.materialui.co/materialIcons/alert/warning_amber_36x36.png" /> Warning
 
             You've selected to skip deploying your SignalSciences AccessKeyId and SecretAccessKey to the cluster with this deployment.
@@ -115,14 +115,14 @@ lifecycle:
               secretAccessKey: "base64 encoded value"
               accessKeyId: "base64 encoded value"
             ```
-          {{repl else if ConfigOptionEquals "sealed_secrets" "sealed_secrets"}}
+          {{repl else if ConfigOptionEquals "secret_type" "sealed_secrets"}}
             # <img src="https://www.materialui.co/materialIcons/alert/warning_amber_36x36.png" /> Warning
 
             Your SignalSciences AccessKeyId and SecretAccessKey will be encrypted using the cert you've provided. The SealedSecret controller running in your target cluster
             must be able to decrypt these for the Agent to start properly.
 
             If you have trouble getting the Agnet to start, a good step to debugging this is to check the logs of the Sealed Secret controller (probably running in the kube-system namespace).
-          {{repl else}}
+          {{repl else if ConfigOptionEquals "secret_type" "unencrypted_secrets"}}
             # <img src="https://www.materialui.co/materialIcons/alert/warning_amber_36x36.png" /> Warning
 
             Your SignalSciences AccessKeyId and SecretAccessKey will be available as plain text in the YAML file that Ship generates. This should be considered sensitive and treated with care.
@@ -142,7 +142,7 @@ lifecycle:
 
     - kustomize:
         requires: ["render"]
-        base: installer/base
+        base: '{{repl if (ConfigOptionEquals "secret_type" "no_secrets")}}base{{repl else}}overlays/secrets{{repl end}}'
         overlay: overlays/ship
         dest: signalsciences.yaml
 
