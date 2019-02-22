@@ -1,7 +1,7 @@
 assets:
   v1:
     - github:
-        dest: ../base
+        dest: ./base
         repo: shipapps/signal-sciences
         path: manifests/
         proxy: false
