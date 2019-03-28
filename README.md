@@ -1,5 +1,8 @@
 # Signal Sciences Agent
 
+
+<a target="_blank" href="https://replicated.com/watch/create/init?upstream=github.com%2Fshipapps%2Fsignal-sciences"><img height="30" src="https://www.replicated.com/images/ship/oss/dws-green.svg" alt="Deploy"></a><br>
+
 This [Ship](https://github.com/replicatedhq/ship) application provides an easy and repeatable way to deploy the SignalSciences agent using a GitOps workflow. Ship supports creating patches (add, edit and delete) using [Kustomize](https://kustomize.io).
 
 ## Quick Start
